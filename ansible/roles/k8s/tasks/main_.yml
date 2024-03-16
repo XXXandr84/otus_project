@@ -1,0 +1,59 @@
+---
+ - name: check if GPG key file exists
+   stat:
+    path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+   register: gpg_key_file
+   become: true
+
+ - name: add Kubernetes repository
+   shell: echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+   become: true
+
+ - name: download Kubernetes GPG key
+#   shell: sudo apt install -y apt-transport-https ca-certificates curl
+   shell: deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+   become: true
+
+ - name: download Kubernetes GPG key
+   shell: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+   when: not gpg_key_file.stat.exists
+   become: true
+
+ - name: update package cache after adding repository
+   apt:
+     update_cache: yes
+
+ - name: install Kubernetes components
+   apt:
+     name:
+       - kubelet
+       - kubeadm
+       - kubectl
+     state: present
+
+ - name: hold Kubernetes packages to prevent automatic updates
+   command: sudo apt-mark hold kubelet kubeadm kubectl
+########################################################################
+#- name: Update repositories and install required packages
+#  apt:
+#    name: "{{ item }}"
+#    state: present
+#    update_cache: yes
+#  loop: "{{ k8s_required_packages }}"
+
+#- name: Add Google Cloud public signing key
+#  apt_key:
+#    url: "{{ k8s_signing_key }}"
+#    state: present#
+
+#- name: Add the Kubernetes apt repository
+#  apt_repository:
+##    repo: "{{ k8s_repo }}"
+#    state: present
+
+#- name: Install Kubernetes binaries
+#  apt:
+#    pkg: "{{ item }}"
+#    update_cache: yes
+#    force: true
+#  loop: "{{ k8s_packages }}"
